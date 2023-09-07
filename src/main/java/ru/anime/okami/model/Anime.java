@@ -46,13 +46,13 @@ public class Anime {
 
     private double rating;
 
-    @ManyToMany(mappedBy = "animeList")
-    private List<Genre> genres;
+//    @ManyToMany(mappedBy = "animeList")
+//    private List<Genre> genres;
 
-    @OneToMany(mappedBy = "animeComments")
-    private List<Comment> comment;
-
-    @OneToOne(mappedBy = "animeEpisodes")
-    private Episode episode;
+//    @OneToMany(mappedBy = "animeComments")
+//    private List<Comment> comment;
+//
+//    @OneToMany(mappedBy = "animeEpisodes")
+//    private List<Episode> episode;
 
 }
