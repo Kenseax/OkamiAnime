@@ -49,7 +49,7 @@ public class AuthServiceImpl implements AuthService {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        return "Logged in successfully";
+        return authentication.getName();
     }
 
     @Override
@@ -66,7 +66,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = new User();
-        user.setFirstName(registerDto.getName());
+        //user.setFirstName(registerDto.getName());
         user.setUsername(registerDto.getUsername());
         user.setMail(registerDto.getMail());
         user.setPassword(passwordEncoder.encode(registerDto.getPassword()));
@@ -78,10 +78,6 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
-        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
-                registerDto.getUsername(), registerDto.getPassword()));
-
-        SecurityContextHolder.getContext().setAuthentication(authentication);
         return "User registered successfully and automatically logged in!";
     }
 }
