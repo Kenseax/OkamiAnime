@@ -22,7 +22,7 @@ import ru.anime.okami.utils.HeaderConst.*;
 
 @Slf4j
 @RestController
-@CrossOrigin(origins = "http://localhost:3000", maxAge = 648000, allowCredentials = "true")
+@CrossOrigin(origins = "http://localhost:3000", maxAge = 648000, allowCredentials = "true")rf
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthorizationController {
