@@ -2,56 +2,68 @@ package ru.anime.okami.controller;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetails;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
-import ru.anime.okami.payload.LoginDto;
+import ru.anime.okami.model.User;
 import ru.anime.okami.payload.RegisterDto;
 import ru.anime.okami.service.AuthService;
-import ru.anime.okami.utils.HeaderConst;
-import ru.anime.okami.utils.HeaderConst.*;
+import ru.anime.okami.service.TokenService;
+import ru.anime.okami.service.impl.UserServiceImpl;
+
+import java.io.IOException;
+import java.util.List;
 
 
 @Slf4j
 @RestController
-@CrossOrigin(origins = "http://localhost:3000", maxAge = 648000, allowCredentials = "true")
+@CrossOrigin(origins = "https://262d-79-139-249-160.ngrok-free.app/", maxAge = 648000, allowCredentials = "true")
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthorizationController {
 
-
-    private final AuthenticationProvider authenticationProvider;
-
+    private final TokenService tokenService;
+    private final AuthenticationManager authManager;
+    private final UserServiceImpl userService;
     private final AuthService authService;
+
     private final HttpHeaders responseHeaders = new HttpHeaders();
 
     {
-       // responseHeaders.add(HeaderConst.ACCESS_CONTROL_ALLOW_ORIGIN, HeaderConst.ACCESS_CONTROL_ALLOW_ORIGIN_VALUE);
-        responseHeaders.add(HeaderConst.ACCESS_CONTROL_ALLOW_METHODS, HeaderConst.ACCESS_CONTROL_ALLOW_METHODS_VALUE);
-        responseHeaders.add(HeaderConst.ACCESS_CONTROL_ALLOW_HEADERS, HeaderConst.ACCESS_CONTROL_ALLOW_HEADERS_VALUE);
-        responseHeaders.add(HeaderConst.ACCESS_CONTROL_EXPOSE_HEADERS, HeaderConst.ACCESS_CONTROL_EXPOSE_HEADERS_VALUE);
-       // responseHeaders.add(HeaderConst.ACCESS_CONTROL_ALLOW_CREDENTIALS, HeaderConst.ACCESS_CONTROL_ALLOW_CREDENTIALS_VALUE);
-        responseHeaders.add(HeaderConst.CACHE_CONTROL, HeaderConst.CACHE_CONTROL_VALUE);
+        responseHeaders.setAccessControlAllowMethods(List.of(HttpMethod.POST, HttpMethod.PUT, HttpMethod.PATCH, HttpMethod.GET, HttpMethod.DELETE, HttpMethod.OPTIONS));
+        responseHeaders.setAccessControlAllowHeaders(List.of("Origin", "X-Api-Key", "X-Requested-With", "Content-Type", "Accept", "Authorization"));
+        responseHeaders.setAccessControlExposeHeaders(List.of("Set-Cookie"));
+        responseHeaders.setCacheControl("max-age=648000");
+    }
+
+    record LoginRequest(String username, String password) {
+    }
+
+    record LoginResponse(String message, String access_jwt_token, String refresh_jwt_token) {
     }
 
     @PostMapping(value = {"/login", "/signin"})
-    public ResponseEntity<?> login(@RequestBody LoginDto loginDto, HttpServletRequest request) throws ServletException {
-        //String login = authService.login(loginDto);
-        request.login(loginDto.getUsername(), loginDto.getPassword());
-        HttpSession session = request.getSession();
-        session.setAttribute("username", loginDto.getUsername());
-        return ResponseEntity.ok().headers(responseHeaders).body(loginDto.getUsername());
+    public LoginResponse login(@RequestBody LoginRequest loginRequest, HttpServletRequest request) throws ServletException, IOException {
+//        UsernamePasswordAuthenticationToken authenticationToken =
+//                new UsernamePasswordAuthenticationToken(loginRequest.username, loginRequest.password);
+//        Authentication auth = authManager.authenticate(authenticationToken);
+//        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        User user = (User) userService.loadUserByUsername(loginRequest.username);
+        String access_token = tokenService.generateAccessToken(user);
+        String refresh_token = tokenService.generateRefreshToken(user);
+
+        request.login(loginRequest.username, loginRequest.password);
+
+        return new LoginResponse("User with email = " + loginRequest.username + " successfully logged in!"
+                , access_token, refresh_token);
     }
 
-    // Build Register REST API
     @PostMapping(value = {"/register", "/signup"})
     public ResponseEntity<String> register(@RequestBody RegisterDto registerDto, HttpServletRequest request) {
 
@@ -61,32 +73,34 @@ public class AuthorizationController {
     }
 
     @GetMapping("/current")
-    public ResponseEntity<?> getCurrentUser(HttpSession session) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = (String) session.getAttribute("username");
+    public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
+        String authorizationToken = request.getHeader("Authorization");
+        String s = tokenService.parseToken(authorizationToken);
+        User user = (User) userService.loadUserByUsername(s);
+        //refreshToken(request);
 
-        return ResponseEntity.ok().headers(responseHeaders).body(username);
+        return ResponseEntity.ok().headers(responseHeaders).body(user);
     }
 
-    @PostMapping("/logout")
+    @GetMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request) throws ServletException {
         request.logout();
-        return ResponseEntity.ok("Logged out successfully!");
+        return ResponseEntity.ok().headers(responseHeaders).body("Logged out");
     }
 
-    private void doAutoLogin(String username, String password, HttpServletRequest request) {
+    record RefreshTokenResponse(String access_jwt_token, String refresh_jwt_token) {
+    }
 
-        try {
-            // Must be called from request filtered by Spring Security, otherwise SecurityContextHolder is not updated
-            UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(username, password);
-            token.setDetails(new WebAuthenticationDetails(request));
-            Authentication authentication = this.authenticationProvider.authenticate(token);
-            log.debug("Logging in with [{}]", authentication.getPrincipal());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-        } catch (Exception e) {
-            SecurityContextHolder.getContext().setAuthentication(null);
-            log.error("Failure in autoLogin", e);
-        }
+    @CrossOrigin(origins = "https://262d-79-139-249-160.ngrok-free.app/")
+    @GetMapping("/token/refresh")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request) {
+        String headerAuth = request.getHeader("Authorization");
+        //String refreshToken = headerAuth.substring(7, headerAuth.length());
+        String name = tokenService.parseToken(headerAuth);
+        User user = (User) userService.loadUserByUsername(name);
+        String access_token = tokenService.generateAccessToken(user);
+        String refresh_token = tokenService.generateRefreshToken(user);
 
+        return ResponseEntity.ok().headers(responseHeaders).body(new RefreshTokenResponse(access_token, refresh_token));
     }
 }
