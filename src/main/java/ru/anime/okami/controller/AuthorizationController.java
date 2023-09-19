@@ -30,7 +30,7 @@ import java.util.Set;
 
 @Slf4j
 @RestController
-@CrossOrigin(origins = "https://4aed-79-139-249-160.ngrok-free.app/", maxAge = 648000, allowCredentials = "true")
+@CrossOrigin(origins = "https://423b-79-139-249-160.ngrok-free.app/", maxAge = 648000, allowCredentials = "true")
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthorizationController {
@@ -60,7 +60,6 @@ public class AuthorizationController {
         User user = userRepository.findByUsername(loginRequest.username).orElse(null);
         String access_token = tokenService.generateAccessToken(user);
         String refresh_token = tokenService.generateRefreshToken(user);
-        CsrfToken csrfToken = csrfTokenRepository.generateToken(request);
 
         request.login(loginRequest.username, loginRequest.password);
 
