@@ -25,6 +25,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 import ru.anime.okami.service.TokenService;
 import ru.anime.okami.service.UserService;
@@ -46,19 +47,19 @@ public class SecurityConfig {
 
     @Bean("securityFilterChain")
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf().disable()
-                .authorizeHttpRequests((authorize) ->
+        http.csrf().disable().authorizeHttpRequests((authorize) ->
                         //authorize.anyRequest().authenticated()
-                        authorize.requestMatchers(HttpMethod.GET, "/auth/**").permitAll()
-                                //.requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
-                                .requestMatchers("/auth/login").anonymous()
-                                .requestMatchers("/auth/register").permitAll()
-                                .requestMatchers("/auth/current").permitAll()
-                                .requestMatchers("/swagger-ui/**").permitAll()
-                                .requestMatchers("/v3/api-docs/**").permitAll()
-                                .anyRequest().authenticated()
-                ).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.ALWAYS))
-                .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+                    authorize.requestMatchers(HttpMethod.GET, "/auth/**").permitAll()
+                            //.requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
+                            .requestMatchers("/auth/login").anonymous()
+                            .requestMatchers("/auth/logout").authenticated()
+                            .requestMatchers("/auth/token/refresh").permitAll()
+                            .requestMatchers("/auth/register").permitAll()
+                            .requestMatchers("/auth/current").permitAll()
+                            .requestMatchers("/swagger-ui/**").permitAll()
+                            .requestMatchers("/v3/api-docs/**").permitAll()
+                            .anyRequest().authenticated()
+                ).oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
 
         return http.build();
     }
@@ -98,8 +99,4 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
-    public CookieSameSiteSupplier applicationCookieSameSiteSupplier() {
-        return CookieSameSiteSupplier.ofNone();
-    }
 }
