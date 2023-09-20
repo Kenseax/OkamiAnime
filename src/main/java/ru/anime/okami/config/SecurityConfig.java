@@ -51,15 +51,17 @@ public class SecurityConfig {
                         //authorize.anyRequest().authenticated()
                     authorize.requestMatchers(HttpMethod.GET, "/auth/**").permitAll()
                             //.requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
-                            .requestMatchers("/auth/login").anonymous()
-                            .requestMatchers("/auth/logout").authenticated()
+                            .requestMatchers("/auth/login").permitAll()
+                            .requestMatchers("/auth/logout").permitAll()
                             .requestMatchers("/auth/token/refresh").permitAll()
                             .requestMatchers("/auth/register").permitAll()
                             .requestMatchers("/auth/current").permitAll()
                             .requestMatchers("/swagger-ui/**").permitAll()
                             .requestMatchers("/v3/api-docs/**").permitAll()
                             .anyRequest().authenticated()
-                ).oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+                ).oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)
+                .logout(logout -> logout.deleteCookies("JSESSIONID")
+                        .clearAuthentication(true));
 
         return http.build();
     }

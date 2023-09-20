@@ -2,6 +2,7 @@ package ru.anime.okami.service;
 
 
 import org.springframework.stereotype.Service;
+import ru.anime.okami.model.User;
 import ru.anime.okami.payload.LoginDto;
 import ru.anime.okami.payload.RegisterDto;
 

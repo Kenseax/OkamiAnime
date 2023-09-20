@@ -78,6 +78,6 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
-        return "User registered successfully and automatically logged in!";
+        return registerDto.getUsername();
     }
 }

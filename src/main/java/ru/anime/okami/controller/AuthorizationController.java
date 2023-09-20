@@ -4,12 +4,19 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.hibernate5.SpringSessionContext;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
@@ -22,6 +29,7 @@ import ru.anime.okami.repository.RoleRepository;
 import ru.anime.okami.repository.UserRepository;
 import ru.anime.okami.service.AuthService;
 import ru.anime.okami.service.TokenService;
+import ru.anime.okami.service.UserService;
 
 import java.io.IOException;
 import java.util.List;
@@ -30,7 +38,7 @@ import java.util.Set;
 
 @Slf4j
 @RestController
-@CrossOrigin(origins = "https://423b-79-139-249-160.ngrok-free.app/", maxAge = 648000, allowCredentials = "true")
+@CrossOrigin(origins = "https://c46d-79-139-249-160.ngrok-free.app/", maxAge = 648000, allowCredentials = "true")
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthorizationController {
@@ -40,9 +48,9 @@ public class AuthorizationController {
     private final UserRepository userRepository;
     private final AuthService authService;
     private final RoleRepository roleRepository;
+    private final UserService userService;
 
     private final HttpHeaders responseHeaders = new HttpHeaders();
-    private final CsrfTokenRepository csrfTokenRepository = new CookieCsrfTokenRepository();
 
     {
         responseHeaders.setAccessControlAllowMethods(List.of(HttpMethod.POST, HttpMethod.PUT, HttpMethod.PATCH, HttpMethod.GET, HttpMethod.DELETE, HttpMethod.OPTIONS));
@@ -57,20 +65,19 @@ public class AuthorizationController {
 
     @PostMapping(value = {"/login", "/signin"})
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest, HttpServletRequest request) throws ServletException, IOException {
-        User user = userRepository.findByUsername(loginRequest.username).orElse(null);
-        String access_token = tokenService.generateAccessToken(user);
-        String refresh_token = tokenService.generateRefreshToken(user);
+
+        HttpSession session = request.getSession();
+        session.invalidate();
 
         request.login(loginRequest.username, loginRequest.password);
 
-        return ResponseEntity.ok().headers(responseHeaders).body(new LoginResponse("User with email = " + loginRequest.username + " successfully logged in!"
-                , access_token, refresh_token));
+        return ResponseEntity.ok().headers(responseHeaders).body(generateToken(loginRequest.username));
     }
 
     @PostMapping(value = {"/register", "/signup"})
-    public ResponseEntity<String> register(@RequestBody RegisterDto registerDto, HttpServletRequest request) {
-        String response = authService.register(registerDto);
-        return ResponseEntity.ok().headers(responseHeaders).body(response);
+    public ResponseEntity<LoginResponse> register(@RequestBody RegisterDto registerDto, HttpServletRequest request) {
+        String regName = authService.register(registerDto);
+        return ResponseEntity.ok().headers(responseHeaders).body(generateToken(regName));
     }
 
     @GetMapping("/current")
@@ -82,24 +89,19 @@ public class AuthorizationController {
         if (user == null) {
             return ResponseEntity.unprocessableEntity().build();
         }
-        List<String> roles = roleRepository.findRolesByUserId(user.getId());
 
+        List<String> roles = roleRepository.findRolesByUserId(user.getId());
         UserDto userDto = new UserDto(user.getUsername(), user.getAvatar(), roles);
 
         return ResponseEntity.ok().headers(responseHeaders).body(userDto);
     }
 
-    @GetMapping("/logout")
+    @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) throws ServletException {
-        request.logout();
-        Cookie[] cookies = request.getCookies();
-        for (Cookie cookie : cookies) {
-            cookie.setMaxAge(0);
-            cookie.setValue(null);
-            cookie.setPath("/");
-            response.addCookie(cookie);
-        }
-        return ResponseEntity.ok().headers(responseHeaders).body("Logged out");
+        //request.logout();
+        HttpSession session = request.getSession();
+        session.invalidate();
+        return ResponseEntity.ok().headers(responseHeaders).header("Cookie", "").body("Logged out");
     }
 
     record RefreshTokenResponse(String access_jwt_token, String refresh_jwt_token) {
@@ -114,5 +116,15 @@ public class AuthorizationController {
         String refresh_token = tokenService.generateRefreshToken(user);
 
         return ResponseEntity.ok().headers(responseHeaders).body(new RefreshTokenResponse(access_token, refresh_token));
+    }
+
+    public LoginResponse generateToken(String username) {
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            return new LoginResponse("User not found", "", "");
+        }
+        String access_token = tokenService.generateAccessToken(user);
+        String refresh_token = tokenService.generateRefreshToken(user);
+        return new LoginResponse("User: " + username + " successfully singed in", access_token, refresh_token);
     }
 }

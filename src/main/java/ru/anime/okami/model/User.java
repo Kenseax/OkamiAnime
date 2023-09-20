@@ -42,7 +42,7 @@ public class User implements UserDetails {
 
     private String avatar;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     private Set<Role> roles;
 
     public User(long id, String username) {
