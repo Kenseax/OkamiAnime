@@ -1,7 +1,6 @@
 package ru.anime.okami.controller;
 
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -10,19 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.orm.hibernate5.SpringSessionContext;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.web.bind.annotation.*;
 import ru.anime.okami.form.UserDto;
-import ru.anime.okami.model.Role;
 import ru.anime.okami.model.User;
 import ru.anime.okami.payload.RegisterDto;
 import ru.anime.okami.repository.RoleRepository;
@@ -30,15 +19,16 @@ import ru.anime.okami.repository.UserRepository;
 import ru.anime.okami.service.AuthService;
 import ru.anime.okami.service.TokenService;
 import ru.anime.okami.service.UserService;
+import ru.anime.okami.service.impl.DataService;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.List;
-import java.util.Set;
 
 
 @Slf4j
 @RestController
-@CrossOrigin(origins = "https://c46d-79-139-249-160.ngrok-free.app/", maxAge = 648000, allowCredentials = "true")
+@CrossOrigin(origins = "https://6dde-79-139-249-160.ngrok-free.app/", maxAge = 648000, allowCredentials = "true")
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthorizationController {
@@ -49,6 +39,7 @@ public class AuthorizationController {
     private final AuthService authService;
     private final RoleRepository roleRepository;
     private final UserService userService;
+    private final DataService dataService;
 
     private final HttpHeaders responseHeaders = new HttpHeaders();
 
@@ -81,7 +72,7 @@ public class AuthorizationController {
     }
 
     @GetMapping("/current")
-    public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
+    public ResponseEntity<?> getCurrentUser(HttpServletRequest request) throws IOException, URISyntaxException {
         String authorizationToken = request.getHeader("Authorization");
         String name = tokenService.parseToken(authorizationToken);
         User user = userRepository.findByUsername(name).orElse(null);

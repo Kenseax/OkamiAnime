@@ -8,6 +8,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import ru.anime.okami.utils.RsaProperties;
 
+import java.io.IOException;
+
 @SpringBootApplication
 @EnableJpaRepositories(basePackages = "ru.anime.okami")
 @EnableConfigurationProperties(RsaProperties.class)
@@ -18,7 +20,7 @@ public class OkamiApplication {
         return new ModelMapper();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         SpringApplication.run(OkamiApplication.class, args);
     }
 
