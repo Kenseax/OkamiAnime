@@ -36,8 +36,7 @@ public class DBController {
 
     @GetMapping("/update")
     public ResponseEntity<?> updateData() {
-        Results update = dataService.update();
-        return new ResponseEntity<Results>(update, HttpStatus.OK);
+        return new ResponseEntity<java.util.List<Results>>(dataService.update(), HttpStatus.OK);
     }
 
     @GetMapping("/list")

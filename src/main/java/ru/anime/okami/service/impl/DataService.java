@@ -16,6 +16,7 @@ import ru.anime.okami.repository.TranslationRepository;
 import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.Optional;
 
 @Service
 public class DataService {
@@ -45,7 +46,6 @@ public class DataService {
             resourceUrl = resourceUrl.replaceFirst("%2C", ",");
             response = restTemplate.getForObject(resourceUrl, List.class);
             assert response != null;
-
             java.util.List<Results> results = response.getResults();
             java.util.List<Results> resultsWithoutDuplicate = new LinkedList<>();
 
@@ -57,8 +57,8 @@ public class DataService {
                     Results resultsFromDuplicateList = resultsWithoutDuplicate.stream()
                             .filter(o -> o.getTitle().equals(r.getTitle()))
                             .findFirst().orElse(null);
+                    java.util.List<String> allTranslations = new LinkedList<>(resultsFromDuplicateList.getAllTranslations());
 
-                    java.util.List<String> allTranslations = resultsFromDuplicateList.getAllTranslations();
                     allTranslations.add(r.getTranslation().getTitle());
 
                     resultsFromDuplicateList.setAllTranslations(allTranslations);
@@ -66,7 +66,7 @@ public class DataService {
                     resultsWithoutDuplicate.add(resultsFromDuplicateList);
                 } else if (resultsRepository.findByTitle(r.getTitle()).isPresent()) {
                     Results resultsFromDb = resultsRepository.findByTitle(r.getTitle()).orElse(null);
-                    java.util.List<String> allTranslations = resultsFromDb.getAllTranslations();
+                    java.util.List<String> allTranslations = new LinkedList<>(resultsFromDb.getAllTranslations());
                     allTranslations.add(r.getTranslation().getTitle());
                     resultsFromDb.setAllTranslations(allTranslations);
                     resultsRepository.save(resultsFromDb);
@@ -91,8 +91,26 @@ public class DataService {
         return response;
     }
 
-    public Results update() {
-        return resultsRepository.findById(23869L).orElse(null);
+
+    public java.util.List<Results> update() {
+        String resourceUrl = "https://kodikapi.com/list?token=" + TOKEN + "&types=anime,anime-serial&with_material_data=true&limit=100";
+        List response = restTemplate.getForObject(resourceUrl, List.class);
+        java.util.List<Results> results = response.getResults();
+        java.util.List<Results> updatedResults = new LinkedList<>();
+
+        for (Results r : results) {
+            Results resFromDb = resultsRepository.findByTitle(r.getTitle()).orElse(null);
+            if (resFromDb != null) {
+                java.util.List<String> translations = resFromDb.getAllTranslations();
+                if (!translations.contains(r.getTranslation().getTitle())) {
+                    translations.add(r.getTranslation().getTitle());
+                }
+                resultsRepository.save(r);
+                updatedResults.add(r);
+            }
+        }
+
+        return updatedResults;
     }
 
     public List getList() {
