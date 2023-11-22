@@ -65,7 +65,7 @@ public class Results implements Serializable {
     private String otherTitle;
 
     @JsonProperty("translation")
-    @OneToOne
+    @OneToOne(cascade = CascadeType.MERGE)
     private Translation translation;
 
     @JsonProperty("year")

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import ru.anime.okami.generatedPojo.List;
 import ru.anime.okami.generatedPojo.Results;
@@ -16,7 +17,6 @@ import ru.anime.okami.repository.TranslationRepository;
 import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
-import java.util.Optional;
 
 @Service
 public class DataService {
@@ -75,7 +75,6 @@ public class DataService {
                     resultsWithoutDuplicate.add(r);
 
                     if (r.getMaterialData() != null) {
-                        r.setMaterialData(r.getMaterialData());
                         materialDataRepository.save(r.getMaterialData());
                     }
                 }
@@ -92,6 +91,7 @@ public class DataService {
     }
 
 
+    @Transactional
     public java.util.List<Results> update() {
         String resourceUrl = "https://kodikapi.com/list?token=" + TOKEN + "&types=anime,anime-serial&with_material_data=true&limit=100";
         List response = restTemplate.getForObject(resourceUrl, List.class);
@@ -99,14 +99,37 @@ public class DataService {
         java.util.List<Results> updatedResults = new LinkedList<>();
 
         for (Results r : results) {
-            Results resFromDb = resultsRepository.findByTitle(r.getTitle()).orElse(null);
-            if (resFromDb != null) {
-                java.util.List<String> translations = resFromDb.getAllTranslations();
-                if (!translations.contains(r.getTranslation().getTitle())) {
-                    translations.add(r.getTranslation().getTitle());
+            if (translationRepository.findByTitle(r.getTranslation().getTitle()).isEmpty()) {
+                translationRepository.save(r.getTranslation());
+            }
+            Results resFromDb = resultsRepository.findFirstByTitle(r.getTitle()).orElse(null);
+            if (resFromDb == null) {
+                r.setAllTranslations(java.util.List.of(r.getTranslation().getTitle()));
+                if (r.getMaterialData() != null) {
+                    materialDataRepository.save(r.getMaterialData());
                 }
                 resultsRepository.save(r);
                 updatedResults.add(r);
+            } else if (resFromDb.getId().equals(r.getId()) &&
+                    (resFromDb.getEpisodesCount() < r.getEpisodesCount() || resFromDb.getLastEpisode() < r.getLastEpisode())) {
+
+                resFromDb.setUpdatedAt(r.getUpdatedAt());
+                if (resFromDb.getEpisodesCount() < r.getEpisodesCount()) {
+                    resFromDb.setEpisodesCount(r.getEpisodesCount());
+                }
+                if (resFromDb.getLastEpisode() < r.getLastEpisode()) {
+                    resFromDb.setLastEpisode(r.getLastEpisode());
+                }
+
+                resultsRepository.save(resFromDb);
+                updatedResults.add(resFromDb);
+            } else if (!resFromDb.getAllTranslations().contains(r.getTranslation().getTitle())) {
+                java.util.List<String> translations = new LinkedList<>(resFromDb.getAllTranslations());
+                translations.add(r.getTranslation().getTitle());
+                resFromDb.setUpdatedAt(r.getUpdatedAt());
+                resFromDb.setAllTranslations(translations);
+                resultsRepository.save(resFromDb);
+                updatedResults.add(resFromDb);
             }
         }
 
@@ -122,10 +145,9 @@ public class DataService {
     }
 
     public java.util.List<Translation> saveTranslations() throws IOException {
-        File file = new File("src/main/java/ru/anime/okami/schema/required.json");
-        ObjectMapper objectMapper = new ObjectMapper();
+        String resourceUrl = "https://kodikapi.com/list?token=" + TOKEN;
 
-        Translation[] translations = objectMapper.readValue(file, Translation[].class);
+        Translation[] translations = restTemplate.getForObject(resourceUrl, Translation[].class);
 
         if (translations != null) {
             translationRepository.saveAll(java.util.List.of(translations));

@@ -18,6 +18,4 @@ public class Translation {
 
     private String type;
 
-    @OneToOne
-    private Results results;
 }
