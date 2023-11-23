@@ -28,7 +28,6 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@CrossOrigin(origins = "https://6dde-79-139-249-160.ngrok-free.app/", maxAge = 648000, allowCredentials = "true")
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthorizationController {

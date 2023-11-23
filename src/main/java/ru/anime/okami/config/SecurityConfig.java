@@ -44,10 +44,11 @@ public class SecurityConfig {
 
     @Bean("securityFilterChain")
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf().disable().authorizeHttpRequests((authorize) ->
+        http.csrf().disable().cors().and().authorizeHttpRequests((authorize) ->
                         //authorize.anyRequest().authenticated()
                     authorize.requestMatchers(HttpMethod.GET, "/auth/**").permitAll()
                             .requestMatchers(HttpMethod.GET, "/data/**").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/anime/**").permitAll()
                             //.requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
                             .requestMatchers("/auth/login").permitAll()
                             .requestMatchers("/auth/logout").permitAll()
@@ -98,5 +99,7 @@ public class SecurityConfig {
     public static PasswordEncoder bcryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
+
 
 }

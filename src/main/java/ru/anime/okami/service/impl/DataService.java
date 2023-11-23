@@ -1,6 +1,5 @@
 package ru.anime.okami.service.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -14,7 +13,6 @@ import ru.anime.okami.repository.MaterialDataRepository;
 import ru.anime.okami.repository.ResultsRepository;
 import ru.anime.okami.repository.TranslationRepository;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
 
@@ -40,7 +38,7 @@ public class DataService {
     }
 
     public List save() throws IOException {
-        String resourceUrl = "https://kodikapi.com/list?token=" + TOKEN + "&types=anime%2Canime-serial&with_material_data=true&limit=50";
+        String resourceUrl = "https://kodikapi.com/list?token=" + TOKEN + "&types=anime%2Canime-serial&with_material_data=true&limit=50&not_blocked_in=RU";
         List response;
         do {
             resourceUrl = resourceUrl.replaceFirst("%2C", ",");
